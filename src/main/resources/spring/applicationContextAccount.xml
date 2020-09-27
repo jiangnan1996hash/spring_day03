@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--  使用springAop的xml对事务的支持  -->
+
+
+
+    <!--  加载属性文件  -->
+    <context:property-placeholder location="classpath*:db.properties"/>
+
+    <!-- 配置连接池   -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"></property>
+        <property name="jdbcUrl" value="${jdbc.url}"></property>
+        <property name="user" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+
+    </bean>
+
+    <!-- 配置jdbc模板   -->
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!--配置业务层  核心业务层-->
+    <bean id="accountDao" class="com.sun.dao.impl.AccountDaoImpl">
+        <property name="jdbcTemplate" ref="jdbcTemplate"></property>
+    </bean>
+
+    <!--配置业务层  核心业务层-->
+    <bean id="accountService" class="com.sun.service.impl.AccountServiceImpl">
+        <property name="accountDao" ref="accountDao"></property>
+    </bean>
+
+
+    <!--  配置 事务管理器  -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <!--  注入连接池      -->
+    <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!--配置增强的代码
+          id="" 增强的唯一标识
+          transaction-manager=  配置事务管理器
+    -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <!--定义需要事务控制的方法 信息-->
+            <tx:method name="transfer" read-only="false" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!--配置切面-->
+    <aop:config>
+        <!--相当于切面，一个有关事务的增强切入到指定的业务方法上-->
+        <aop:advisor advice-ref="txAdvice" pointcut="execution(* com.sun.service.impl.*.*(..))"></aop:advisor>
+    </aop:config>
+
+</beans>
